@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>오늘 뭐 먹었나요?</title>
+    <link rel="stylesheet" href="style.css" />
+    <script defer src="app.js"></script>
+  </head>
+  <body>
+    <main class="app">
+      <header class="top">
+        <div>
+          <p class="eyebrow">점심 대화 교실</p>
+          <h1>오늘 뭐 먹었나요?</h1>
+          <p class="summary">
+            자리는 드래그해서 바꾸고, 클릭해서 점심 메뉴와 한줄평을 남깁니다.
+          </p>
+        </div>
+        <div class="stats" aria-label="오늘 기록">
+          <div>
+            <span>학생</span>
+            <strong id="student-count">0</strong>
+          </div>
+          <div>
+            <span>강사</span>
+            <strong>1</strong>
+          </div>
+          <div>
+            <span>기록</span>
+            <strong id="entry-count">0</strong>
+          </div>
+        </div>
+      </header>
+
+      <section class="classroom" aria-label="강의실">
+        <div class="front-wall">
+          <div class="board">
+            <div class="board-title">
+              <span>대신 드립니다</span>
+              <button id="eraser-button" type="button" aria-pressed="false">
+                지우개
+              </button>
+            </div>
+            <p class="board-section-title">베스트 답변</p>
+            <ul id="best-feed"></ul>
+            <p class="board-section-title">오늘의 이야기</p>
+            <ul id="board-feed"></ul>
+          </div>
+
+          <div class="board-writer" id="board-writer" aria-live="polite"></div>
+
+          <div
+            class="teacher"
+            id="teacher-button"
+            role="button"
+            tabindex="0"
+            aria-label="강사 심사 열기"
+          >
+            <div class="teacher-notice" id="teacher-notice">
+              좋은 답변은 베스트로 남겨요.
+            </div>
+            <div class="teacher-face">
+              <span class="hair"></span>
+              <span class="eye left"></span>
+              <span class="eye right"></span>
+              <span class="mouth"></span>
+            </div>
+            <div class="teacher-body"></div>
+            <strong>강사</strong>
+          </div>
+        </div>
+
+        <section class="lunch-groups" aria-label="랜덤 점심 조">
+          <div>
+            <p class="section-kicker">점심 조</p>
+            <h2>랜덤으로 같이 먹을 사람</h2>
+          </div>
+          <button id="make-groups" type="button">4명씩 조 짜기</button>
+          <ol id="group-list"></ol>
+        </section>
+
+        <section class="menu-rankings" aria-label="오늘의 인기 가게 랭킹">
+          <div>
+            <p class="section-kicker">인기 가게</p>
+            <h2>오늘의 인기 가게 랭킹</h2>
+          </div>
+          <button id="save-top-menu" type="button">베스트 가게 저장</button>
+          <ol id="menu-rank-list"></ol>
+          <div class="saved-menus">
+            <strong>저장한 베스트 가게</strong>
+            <ul id="saved-menu-list"></ul>
+          </div>
+        </section>
+
+        <div class="room-floor">
+          <section class="desk-block" aria-label="왼쪽 분단">
+            <h2>1분단</h2>
+            <div class="seat-grid" id="left-block"></div>
+          </section>
+
+          <div class="aisle" aria-hidden="true">
+            <span>복도</span>
+          </div>
+
+          <section class="desk-block" aria-label="오른쪽 분단">
+            <h2>2분단</h2>
+            <div class="seat-grid" id="right-block"></div>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <dialog id="lunch-dialog">
+      <form method="dialog" id="lunch-form">
+        <div class="dialog-head">
+          <div>
+            <p>점심 기록</p>
+            <h2 id="dialog-name">학생</h2>
+          </div>
+          <button type="button" id="close-dialog" aria-label="닫기">×</button>
+        </div>
+
+        <label>
+          <span class="field-title">
+            오늘 먹은 가게 이름
+            <em class="required">필수</em>
+          </span>
+          <input
+            id="restaurant-input"
+            type="text"
+            placeholder="예: 학교 앞 돈까스집"
+          />
+        </label>
+
+        <label>
+          <span class="field-title">
+            먹은 메뉴
+            <em class="optional">선택</em>
+          </span>
+          <input
+            id="menu-input"
+            type="text"
+            placeholder="비워도 됩니다. 예: 등심 돈까스"
+          />
+        </label>
+
+        <label>
+          <span class="field-title">
+            어땠나요?
+            <em class="required">필수</em>
+          </span>
+          <textarea
+            id="review-input"
+            rows="4"
+            placeholder="예: 바삭했는데 소스가 조금 달았어요."
+          ></textarea>
+        </label>
+
+        <label>
+          <span class="field-title">
+            가는데 걸린 거리
+            <em class="optional">선택</em>
+          </span>
+          <input
+            id="distance-input"
+            type="text"
+            placeholder="비워도 됩니다. 예: 걸어서 7분, 450m"
+          />
+        </label>
+
+        <div class="mood-picker" aria-label="기분 선택">
+          <button type="button" data-mood="best" class="mood active">최고</button>
+          <button type="button" data-mood="good" class="mood">괜찮음</button>
+          <button type="button" data-mood="soso" class="mood">쏘쏘</button>
+          <button type="button" data-mood="bad" class="mood">아쉬움</button>
+        </div>
+
+        <div class="dialog-actions">
+          <button type="button" id="delete-entry" class="ghost">삭제</button>
+          <button type="submit">말풍선 올리기</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="teacher-dialog">
+      <form method="dialog" class="teacher-form">
+        <div class="dialog-head">
+          <div>
+            <p>강사 심사</p>
+            <h2>오늘의 이야기 고르기</h2>
+          </div>
+          <button type="button" id="close-teacher-dialog" aria-label="닫기">
+            ×
+          </button>
+        </div>
+        <div id="review-list" class="review-list"></div>
+      </form>
+    </dialog>
+  </body>
+</html>
