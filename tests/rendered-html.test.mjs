@@ -1,11 +1,6 @@
 import assert from "node:assert/strict";
-import { access, readFile, readdir } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
-
-const developmentPreviewMeta =
-  /<meta(?=[^>]*\bname=["']codex-preview["'])(?=[^>]*\bcontent=["']development["'])[^>]*>/i;
-const templateRoot = new URL("../", import.meta.url);
-const previewRoot = new URL("../app/_sites-preview/", import.meta.url);
 
 async function render() {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
@@ -28,64 +23,69 @@ async function render() {
   );
 }
 
-test("server-renders the starter loading skeleton", async () => {
+function getStudentNames(appJs) {
+  const match = appJs.match(/const STUDENTS = \[(?<body>[\s\S]*?)\];/);
+  assert.ok(match?.groups?.body, "STUDENTS roster should be declared");
+
+  return [...match.groups.body.matchAll(/"([^"]+)"/g)].map(
+    ([, name]) => name,
+  );
+}
+
+test("server-renders the classroom lunch board", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
-  assert.match(html, developmentPreviewMeta);
-  assert.match(html, /<title>Your site is taking shape<\/title>/i);
-  assert.match(html, /Building your site/);
-  assert.match(html, /Your site is taking shape/);
-  assert.match(
-    html,
-    /Your first version will appear here automatically when it’s ready\./,
-  );
-  assert.doesNotMatch(html, /Codex/);
-  assert.match(html, /react-loading-skeleton/);
-  assert.match(html, /role="status"/);
+  assert.match(html, /<title>오늘 뭐 먹었나요\?<\/title>/i);
+  assert.match(html, /src="\/classroom-lunch-board\/index\.html"/);
+  assert.doesNotMatch(html, /codex-preview|Building your site/i);
 });
 
-test("keeps the loading skeleton scoped and disposable", async () => {
-  const [preview, css, page, layout, packageJson, files] = await Promise.all([
-    readFile(new URL("SkeletonPreview.tsx", previewRoot), "utf8"),
-    readFile(new URL("preview.css", previewRoot), "utf8"),
-    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../package.json", import.meta.url), "utf8"),
-    readdir(previewRoot),
-  ]);
-
-  assert.deepEqual(files.sort(), ["SkeletonPreview.tsx", "preview.css"]);
-  assert.match(preview, /from "react-loading-skeleton"/);
-  assert.match(preview, /baseColor="#eceae7"/);
-  assert.match(preview, /highlightColor="#f9f8f6"/);
-  assert.match(preview, /duration=\{2\.8\}/);
-  assert.match(preview, /sites-skeleton-search-placeholder/);
-  assert.match(packageJson, /"react-loading-skeleton": "3\.5\.0"/);
-
-  const shellIndex = preview.indexOf('className="sites-skeleton-shell"');
-  const statusIndex = preview.indexOf('className="sites-skeleton-status"');
-  assert.ok(shellIndex >= 0 && statusIndex > shellIndex);
-  assert.match(css, /position:\s*fixed/);
-  assert.match(css, /inset:\s*0/);
-  assert.match(css, /opacity:\s*0\.52/);
-  assert.match(css, /prefers-reduced-motion:\s*reduce/);
-  assert.doesNotMatch(css, /#020617|canvas|pets|progress/i);
-  assert.doesNotMatch(
-    preview,
-    /loading-spinner|status-mark|status-progress|canvas|cookie|random/i,
+test("includes 이서현 without shifting existing student ids", async () => {
+  const appJs = await readFile(
+    new URL("../public/classroom-lunch-board/app.js", import.meta.url),
+    "utf8",
   );
 
-  assert.match(page, /export const metadata:\s*Metadata/);
-  assert.match(page, /"codex-preview": "development"/);
-  assert.match(page, /<SkeletonPreview \/>/);
-  assert.match(layout, /title:\s*"Starter Project"/);
-  assert.doesNotMatch(layout, /codex-preview|_sites-preview|themeColor|\bViewport\b/);
-  assert.doesNotMatch(css, /(^|\s)(html|body)\s*\{/m);
+  const previousRoster = [
+    "박수연",
+    "여혜인",
+    "이채원",
+    "김은혜",
+    "성민규",
+    "백민하",
+    "서현진",
+    "조수권",
+    "한보영",
+    "정다교",
+    "정영준",
+    "최윤하",
+    "이찬종",
+    "김다윤",
+    "박유진",
+    "김수아",
+    "조은지",
+    "최종관",
+    "하창빈",
+    "성루비",
+    "김초현",
+    "최낙준",
+    "박신영",
+    "한수아",
+    "이재윤",
+    "박은비",
+    "윤성혁",
+    "박소정",
+    "최예성",
+  ];
+  const currentRoster = getStudentNames(appJs);
 
-  await assert.rejects(
-    access(new URL("public/_sites-preview", templateRoot)),
-  );
+  assert.deepEqual(currentRoster.slice(0, previousRoster.length), previousRoster);
+  assert.equal(currentRoster.at(-1), "이서현");
+  assert.equal(new Set(currentRoster).size, currentRoster.length);
+  assert.match(appJs, /studentCount\.textContent = String\(STUDENTS\.length\)/);
+  assert.match(appJs, /shuffle\(STUDENTS\)/);
+  assert.match(appJs, /const SEAT_COUNT = 32;/);
 });

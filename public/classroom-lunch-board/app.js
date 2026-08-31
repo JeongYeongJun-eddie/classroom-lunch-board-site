@@ -1,3 +1,4 @@
+// 새 학생은 끝에 추가해 기존 localStorage의 student-N 자리/기록 매핑을 유지합니다.
 const STUDENTS = [
   "박수연",
   "여혜인",
@@ -28,6 +29,7 @@ const STUDENTS = [
   "윤성혁",
   "박소정",
   "최예성",
+  "이서현",
 ];
 
 const LOOKS = [
