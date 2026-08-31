@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import vm from "node:vm";
 
 async function render() {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
@@ -30,6 +31,46 @@ function getStudentNames(appJs) {
   return [...match.groups.body.matchAll(/"([^"]+)"/g)].map(
     ([, name]) => name,
   );
+}
+
+function runAppJsForTest(appJs, extraScript) {
+  class MockElement {
+    constructor() {
+      this.classList = {
+        add() {},
+        remove() {},
+        toggle() {},
+      };
+      this.dataset = {};
+      this.style = {
+        setProperty() {},
+      };
+    }
+
+    addEventListener() {}
+    append() {}
+    close() {}
+    focus() {}
+    setAttribute() {}
+    showModal() {}
+  }
+
+  const context = {
+    document: {
+      createElement: () => new MockElement(),
+      querySelector: () => new MockElement(),
+      querySelectorAll: () => [],
+    },
+    localStorage: {
+      getItem: () => null,
+      removeItem() {},
+      setItem() {},
+    },
+    setTimeout,
+  };
+
+  vm.runInNewContext(`${appJs}\n${extraScript}`, context);
+  return context;
 }
 
 test("server-renders the classroom lunch board", async () => {
@@ -86,6 +127,50 @@ test("includes 이서현 without shifting existing student ids", async () => {
   assert.equal(currentRoster.at(-1), "이서현");
   assert.equal(new Set(currentRoster).size, currentRoster.length);
   assert.match(appJs, /studentCount\.textContent = String\(STUDENTS\.length\)/);
-  assert.match(appJs, /shuffle\(STUDENTS\)/);
+  assert.match(appJs, /createLunchGroups\(STUDENTS\)/);
   assert.match(appJs, /const SEAT_COUNT = 32;/);
+});
+
+test("makes 30 students into six groups of 4 and two groups of 3", async () => {
+  const appJs = await readFile(
+    new URL("../public/classroom-lunch-board/app.js", import.meta.url),
+    "utf8",
+  );
+  const context = runAppJsForTest(
+    appJs,
+    "globalThis.__groupSizes = createLunchGroups(STUDENTS).map((group) => group.length);",
+  );
+
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(context.__groupSizes)),
+    [4, 4, 4, 4, 4, 4, 3, 3],
+  );
+});
+
+test("keeps every lunch group at 3 or more students when possible", async () => {
+  const appJs = await readFile(
+    new URL("../public/classroom-lunch-board/app.js", import.meta.url),
+    "utf8",
+  );
+  const context = runAppJsForTest(
+    appJs,
+    `
+      globalThis.__sizePlans = Array.from({ length: 35 }, (_, index) => index + 6)
+        .map((studentCount) => ({
+          studentCount,
+          sizes: getLunchGroupSizes(studentCount),
+        }));
+    `,
+  );
+
+  for (const { studentCount, sizes } of context.__sizePlans) {
+    assert.equal(
+      sizes.reduce((total, size) => total + size, 0),
+      studentCount,
+    );
+    assert.ok(
+      sizes.every((size) => size >= 3),
+      `${studentCount} students should not create a group smaller than 3`,
+    );
+  }
 });

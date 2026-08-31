@@ -245,20 +245,51 @@ function renderClassroom() {
 }
 
 function makeLunchGroups() {
-  const shuffledStudents = shuffle(STUDENTS);
-  const groups = [];
-
-  for (let index = 0; index < shuffledStudents.length; index += 4) {
-    groups.push(shuffledStudents.slice(index, index + 4));
-  }
-
-  if (groups.length > 1 && groups[groups.length - 1].length === 1) {
-    groups[groups.length - 2].push(groups[groups.length - 1][0]);
-    groups.pop();
-  }
+  const groups = createLunchGroups(STUDENTS);
 
   renderLunchGroups(groups);
   teacherNotice.textContent = "점심 조가 새로 정해졌습니다.";
+}
+
+function createLunchGroups(students) {
+  const shuffledStudents = shuffle(students);
+  const groupSizes = getLunchGroupSizes(shuffledStudents.length);
+  const groups = [];
+  let studentIndex = 0;
+
+  for (const size of groupSizes) {
+    groups.push(shuffledStudents.slice(studentIndex, studentIndex + size));
+    studentIndex += size;
+  }
+
+  return groups;
+}
+
+function getLunchGroupSizes(studentCount) {
+  if (studentCount <= 0) {
+    return [];
+  }
+
+  if (studentCount < 6) {
+    return [studentCount];
+  }
+
+  const fullGroups = Math.floor(studentCount / 4);
+  const remainder = studentCount % 4;
+
+  if (remainder === 0) {
+    return Array(fullGroups).fill(4);
+  }
+
+  if (remainder === 1) {
+    return [...Array(fullGroups - 2).fill(4), 3, 3, 3];
+  }
+
+  if (remainder === 2) {
+    return [...Array(fullGroups - 1).fill(4), 3, 3];
+  }
+
+  return [...Array(fullGroups).fill(4), 3];
 }
 
 function renderLunchGroups(groups) {
