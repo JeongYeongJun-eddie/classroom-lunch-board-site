@@ -24,13 +24,15 @@ async function render() {
   );
 }
 
-function getStudentNames(appJs) {
+function getStudentSlots(appJs) {
   const match = appJs.match(/const STUDENTS = \[(?<body>[\s\S]*?)\];/);
   assert.ok(match?.groups?.body, "STUDENTS roster should be declared");
 
-  return [...match.groups.body.matchAll(/"([^"]+)"/g)].map(
-    ([, name]) => name,
-  );
+  return match.groups.body
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0)
+    .map((entry) => (entry === "null" ? null : entry.replace(/^"|"$/g, "")));
 }
 
 function runAppJsForTest(appJs, extraScript) {
@@ -84,13 +86,13 @@ test("server-renders the classroom lunch board", async () => {
   assert.doesNotMatch(html, /codex-preview|Building your site/i);
 });
 
-test("includes 이서현 without shifting existing student ids", async () => {
+test("includes 이서현 and blanks 박유진's slot without shifting existing student ids", async () => {
   const appJs = await readFile(
     new URL("../public/classroom-lunch-board/app.js", import.meta.url),
     "utf8",
   );
 
-  const previousRoster = [
+  const previousSlots = [
     "박수연",
     "여혜인",
     "이채원",
@@ -105,7 +107,7 @@ test("includes 이서현 without shifting existing student ids", async () => {
     "최윤하",
     "이찬종",
     "김다윤",
-    "박유진",
+    null,
     "김수아",
     "조은지",
     "최종관",
@@ -121,29 +123,35 @@ test("includes 이서현 without shifting existing student ids", async () => {
     "박소정",
     "최예성",
   ];
-  const currentRoster = getStudentNames(appJs);
+  const currentSlots = getStudentSlots(appJs);
 
-  assert.deepEqual(currentRoster.slice(0, previousRoster.length), previousRoster);
-  assert.equal(currentRoster.at(-1), "이서현");
-  assert.equal(new Set(currentRoster).size, currentRoster.length);
-  assert.match(appJs, /studentCount\.textContent = String\(STUDENTS\.length\)/);
-  assert.match(appJs, /createLunchGroups\(STUDENTS\)/);
+  assert.deepEqual(currentSlots.slice(0, previousSlots.length), previousSlots);
+  assert.equal(currentSlots.at(-1), "이서현");
+  assert.ok(!currentSlots.includes("박유진"), "박유진 should no longer appear");
+
+  const activeNames = currentSlots.filter(Boolean);
+  assert.equal(new Set(activeNames).size, activeNames.length);
+  assert.match(
+    appJs,
+    /studentCount\.textContent = String\(STUDENTS\.filter\(Boolean\)\.length\)/,
+  );
+  assert.match(appJs, /createLunchGroups\(STUDENTS\.filter\(Boolean\)\)/);
   assert.match(appJs, /const SEAT_COUNT = 32;/);
 });
 
-test("makes 30 students into six groups of 4 and two groups of 3", async () => {
+test("makes 29 active students into five groups of 4 and three groups of 3", async () => {
   const appJs = await readFile(
     new URL("../public/classroom-lunch-board/app.js", import.meta.url),
     "utf8",
   );
   const context = runAppJsForTest(
     appJs,
-    "globalThis.__groupSizes = createLunchGroups(STUDENTS).map((group) => group.length);",
+    "globalThis.__groupSizes = createLunchGroups(STUDENTS.filter(Boolean)).map((group) => group.length);",
   );
 
   assert.deepEqual(
     JSON.parse(JSON.stringify(context.__groupSizes)),
-    [4, 4, 4, 4, 4, 4, 3, 3],
+    [4, 4, 4, 4, 4, 3, 3, 3],
   );
 });
 

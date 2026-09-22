@@ -1,4 +1,5 @@
 // 새 학생은 끝에 추가해 기존 localStorage의 student-N 자리/기록 매핑을 유지합니다.
+// 학생이 빠지면 그 자리를 null로 남겨 뒤 학생들의 student-N 매핑이 밀리지 않게 합니다.
 const STUDENTS = [
   "박수연",
   "여혜인",
@@ -14,7 +15,7 @@ const STUDENTS = [
   "최윤하",
   "이찬종",
   "김다윤",
-  "박유진",
+  null,
   "김수아",
   "조은지",
   "최종관",
@@ -162,8 +163,16 @@ function saveSeating() {
   localStorage.setItem(SEATING_KEY, JSON.stringify(state.seatingOrder));
 }
 
+function getActiveStudentIds() {
+  return new Set(
+    STUDENTS.map((name, index) => (name ? getStudentId(index) : null)).filter(
+      Boolean
+    )
+  );
+}
+
 function normalizeSeating(seats) {
-  const validIds = new Set(STUDENTS.map((_, index) => getStudentId(index)));
+  const validIds = getActiveStudentIds();
   const usedIds = new Set();
   const normalized = Array.isArray(seats) ? seats.slice(0, SEAT_COUNT) : [];
 
@@ -180,7 +189,11 @@ function normalizeSeating(seats) {
     usedIds.add(id);
   });
 
-  STUDENTS.forEach((_, index) => {
+  STUDENTS.forEach((name, index) => {
+    if (!name) {
+      return;
+    }
+
     const id = getStudentId(index);
 
     if (usedIds.has(id)) {
@@ -198,7 +211,7 @@ function normalizeSeating(seats) {
 }
 
 function removeOldSeatEntries() {
-  const validIds = new Set(STUDENTS.map((_, index) => getStudentId(index)));
+  const validIds = getActiveStudentIds();
 
   Object.keys(state.entries).forEach((id) => {
     if (!validIds.has(id)) {
@@ -224,7 +237,7 @@ function shuffle(items) {
 function renderClassroom() {
   leftBlock.innerHTML = "";
   rightBlock.innerHTML = "";
-  studentCount.textContent = String(STUDENTS.length);
+  studentCount.textContent = String(STUDENTS.filter(Boolean).length);
   state.seatingOrder = normalizeSeating(state.seatingOrder);
 
   const leftSeats = state.seatingOrder.slice(0, 16);
@@ -245,7 +258,7 @@ function renderClassroom() {
 }
 
 function makeLunchGroups() {
-  const groups = createLunchGroups(STUDENTS);
+  const groups = createLunchGroups(STUDENTS.filter(Boolean));
 
   renderLunchGroups(groups);
   teacherNotice.textContent = "점심 조가 새로 정해졌습니다.";
