@@ -135,8 +135,36 @@ test("includes 이서현 and blanks 박유진's slot without shifting existing s
     appJs,
     /studentCount\.textContent = String\(STUDENTS\.filter\(Boolean\)\.length\)/,
   );
-  assert.match(appJs, /createLunchGroups\(STUDENTS\.filter\(Boolean\)\)/);
+  assert.match(appJs, /createLunchGroups\(attendingNames\)/);
   assert.match(appJs, /const SEAT_COUNT = 32;/);
+});
+
+test("excludes marked absentees from lunch groups and keeps every group at 3-4 students", async () => {
+  const appJs = await readFile(
+    new URL("../public/classroom-lunch-board/app.js", import.meta.url),
+    "utf8",
+  );
+  const context = runAppJsForTest(
+    appJs,
+    `
+      state.absentIds = new Set(["student-1", "student-2", "student-3"]);
+      globalThis.__attendingNames = getAttendingStudentNames();
+      globalThis.__groupSizes = createLunchGroups(getAttendingStudentNames()).map(
+        (group) => group.length,
+      );
+    `,
+  );
+
+  assert.equal(context.__attendingNames.length, 26);
+  assert.ok(!context.__attendingNames.includes("박수연"));
+  assert.ok(!context.__attendingNames.includes("여혜인"));
+  assert.ok(!context.__attendingNames.includes("이채원"));
+
+  const groupSizes = JSON.parse(JSON.stringify(context.__groupSizes));
+  assert.deepEqual(groupSizes, [4, 4, 4, 4, 4, 3, 3]);
+  groupSizes.forEach((size) => {
+    assert.ok(size >= 3 && size <= 4, `group size ${size} should be 3 or 4`);
+  });
 });
 
 test("makes 29 active students into five groups of 4 and three groups of 3", async () => {

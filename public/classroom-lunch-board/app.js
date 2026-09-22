@@ -54,6 +54,7 @@ const STORAGE_KEY = "classroomLunch.entries";
 const SEATING_KEY = "classroomLunch.seating";
 const MENU_VOTE_KEY = "classroomLunch.restaurantVotes";
 const BEST_MENU_KEY = "classroomLunch.bestRestaurants";
+const ABSENT_KEY = "classroomLunch.absentToday";
 const SEAT_COUNT = 32;
 
 const leftBlock = document.querySelector("#left-block");
@@ -71,6 +72,8 @@ const closeTeacherDialog = document.querySelector("#close-teacher-dialog");
 const reviewList = document.querySelector("#review-list");
 const makeGroupsButton = document.querySelector("#make-groups");
 const groupList = document.querySelector("#group-list");
+const absenteeList = document.querySelector("#absentee-list");
+const absenteeSummary = document.querySelector("#absentee-summary");
 const saveTopMenuButton = document.querySelector("#save-top-menu");
 const menuRankList = document.querySelector("#menu-rank-list");
 const savedMenuList = document.querySelector("#saved-menu-list");
@@ -97,6 +100,7 @@ const state = {
   savedBestMenus: [],
   draggingId: "",
   justSwapped: false,
+  absentIds: new Set(),
 };
 
 function loadEntries() {
@@ -169,6 +173,81 @@ function getActiveStudentIds() {
       Boolean
     )
   );
+}
+
+function getTodayKey() {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
+}
+
+function loadAbsentees() {
+  const saved = localStorage.getItem(ABSENT_KEY);
+  const activeIds = getActiveStudentIds();
+
+  try {
+    const parsed = saved ? JSON.parse(saved) : null;
+    const ids =
+      parsed && parsed.date === getTodayKey() && Array.isArray(parsed.ids)
+        ? parsed.ids
+        : [];
+    state.absentIds = new Set(ids.filter((id) => activeIds.has(id)));
+  } catch {
+    state.absentIds = new Set();
+  }
+
+  saveAbsentees();
+}
+
+function saveAbsentees() {
+  localStorage.setItem(
+    ABSENT_KEY,
+    JSON.stringify({ date: getTodayKey(), ids: [...state.absentIds] })
+  );
+}
+
+function toggleAbsentee(id) {
+  if (state.absentIds.has(id)) {
+    state.absentIds.delete(id);
+  } else {
+    state.absentIds.add(id);
+  }
+
+  saveAbsentees();
+  renderAbsenteeList();
+}
+
+function getAttendingStudentNames() {
+  return STUDENTS.filter(
+    (name, index) => name && !state.absentIds.has(getStudentId(index))
+  );
+}
+
+function renderAbsenteeList() {
+  absenteeList.innerHTML = "";
+
+  STUDENTS.forEach((name, index) => {
+    if (!name) {
+      return;
+    }
+
+    const id = getStudentId(index);
+    const isAbsent = state.absentIds.has(id);
+    const chip = document.createElement("button");
+
+    chip.type = "button";
+    chip.className = isAbsent ? "absentee-chip active" : "absentee-chip";
+    chip.textContent = name;
+    chip.setAttribute("aria-pressed", String(isAbsent));
+    chip.addEventListener("click", () => toggleAbsentee(id));
+    absenteeList.append(chip);
+  });
+
+  absenteeSummary.textContent =
+    state.absentIds.size > 0
+      ? `오늘 결석 ${state.absentIds.size}명`
+      : "결석자 없음";
 }
 
 function normalizeSeating(seats) {
@@ -258,10 +337,21 @@ function renderClassroom() {
 }
 
 function makeLunchGroups() {
-  const groups = createLunchGroups(STUDENTS.filter(Boolean));
+  const attendingNames = getAttendingStudentNames();
+
+  if (attendingNames.length === 0) {
+    renderLunchGroups([]);
+    teacherNotice.textContent = "출석한 학생이 없어서 조를 만들 수 없습니다.";
+    return;
+  }
+
+  const groups = createLunchGroups(attendingNames);
 
   renderLunchGroups(groups);
-  teacherNotice.textContent = "점심 조가 새로 정해졌습니다.";
+  teacherNotice.textContent =
+    state.absentIds.size > 0
+      ? `점심 조가 새로 정해졌습니다. (결석 ${state.absentIds.size}명 제외)`
+      : "점심 조가 새로 정해졌습니다.";
 }
 
 function createLunchGroups(students) {
@@ -921,8 +1011,10 @@ saveTopMenuButton.addEventListener("click", saveTopMenu);
 loadEntries();
 loadMenuData();
 loadSeating();
+loadAbsentees();
 renderClassroom();
 renderBoardWriter();
 renderBoard();
 renderMenuRankings();
+renderAbsenteeList();
 renderLunchGroups([]);

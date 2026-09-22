@@ -418,6 +418,60 @@ h1 {
   font-weight: 900;
 }
 
+.lunch-groups {
+  grid-template-columns: 1fr auto auto;
+}
+
+.absentee-picker {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  width: 240px;
+}
+
+.absentee-picker-title {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.absentee-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-height: 92px;
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.absentee-chip {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.absentee-chip.active {
+  border-color: #ff8787;
+  background: #ffe3e3;
+  color: #c92a2a;
+}
+
+.absentee-summary {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
 #make-groups,
 #save-top-menu {
   min-height: 44px;
