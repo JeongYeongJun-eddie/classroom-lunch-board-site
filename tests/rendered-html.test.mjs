@@ -52,6 +52,9 @@ function runAppJsForTest(appJs, extraScript) {
     addEventListener() {}
     append() {}
     close() {}
+    contains() {
+      return false;
+    }
     focus() {}
     setAttribute() {}
     showModal() {}
@@ -62,6 +65,7 @@ function runAppJsForTest(appJs, extraScript) {
       createElement: () => new MockElement(),
       querySelector: () => new MockElement(),
       querySelectorAll: () => [],
+      addEventListener() {},
     },
     localStorage: {
       getItem: () => null,

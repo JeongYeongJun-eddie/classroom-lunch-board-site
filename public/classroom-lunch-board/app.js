@@ -72,8 +72,11 @@ const closeTeacherDialog = document.querySelector("#close-teacher-dialog");
 const reviewList = document.querySelector("#review-list");
 const makeGroupsButton = document.querySelector("#make-groups");
 const groupList = document.querySelector("#group-list");
+const absenteePanel = document.querySelector("#absentee-panel");
+const absenteeToggle = document.querySelector("#absentee-toggle");
+const absenteeBadge = document.querySelector("#absentee-badge");
+const absenteeClose = document.querySelector("#absentee-close");
 const absenteeList = document.querySelector("#absentee-list");
-const absenteeSummary = document.querySelector("#absentee-summary");
 const saveTopMenuButton = document.querySelector("#save-top-menu");
 const menuRankList = document.querySelector("#menu-rank-list");
 const savedMenuList = document.querySelector("#saved-menu-list");
@@ -244,10 +247,26 @@ function renderAbsenteeList() {
     absenteeList.append(chip);
   });
 
-  absenteeSummary.textContent =
-    state.absentIds.size > 0
-      ? `오늘 결석 ${state.absentIds.size}명`
-      : "결석자 없음";
+  absenteeBadge.textContent = String(state.absentIds.size);
+  absenteeToggle.classList.toggle("has-absent", state.absentIds.size > 0);
+}
+
+function openAbsenteePanel() {
+  absenteePanel.hidden = false;
+  absenteeToggle.setAttribute("aria-expanded", "true");
+}
+
+function closeAbsenteePanel() {
+  absenteePanel.hidden = true;
+  absenteeToggle.setAttribute("aria-expanded", "false");
+}
+
+function toggleAbsenteePanel() {
+  if (absenteePanel.hidden) {
+    openAbsenteePanel();
+  } else {
+    closeAbsenteePanel();
+  }
 }
 
 function normalizeSeating(seats) {
@@ -1007,6 +1026,22 @@ teacherButton.addEventListener("keydown", (event) => {
 closeTeacherDialog.addEventListener("click", () => teacherDialog.close());
 makeGroupsButton.addEventListener("click", makeLunchGroups);
 saveTopMenuButton.addEventListener("click", saveTopMenu);
+absenteeToggle.addEventListener("click", toggleAbsenteePanel);
+absenteeClose.addEventListener("click", closeAbsenteePanel);
+document.addEventListener("click", (event) => {
+  if (
+    !absenteePanel.hidden &&
+    !absenteePanel.contains(event.target) &&
+    !absenteeToggle.contains(event.target)
+  ) {
+    closeAbsenteePanel();
+  }
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !absenteePanel.hidden) {
+    closeAbsenteePanel();
+  }
+});
 
 loadEntries();
 loadMenuData();
